@@ -54,37 +54,42 @@ for PRESET in maks mid low; do
     echo "✔ Created $ENV_FILE"
 done
 
+echo -e "\n📂 Setting up Data Directories..."
+for PRESET in maks mid low; do
+    TARGET_DIR="$REAL_HOME/.local/share/opencode-$PRESET/opencode"
+    mkdir -p "$TARGET_DIR"
+    chown -R "$REAL_USER:$REAL_GROUP" "$REAL_HOME/.local/share/opencode-$PRESET"
+done
+
 if [ "$AUTH_METHOD" == "2" ]; then
-    echo -e "\n🔐 Setting up Data Isolation & OAuth State..."
+    echo -e "\n🔐 Setting up OAuth State..."
     SOURCE_AUTH="$REAL_HOME/.local/share/opencode/auth.json"
     
     for PRESET in maks mid low; do
         TARGET_DIR="$REAL_HOME/.local/share/opencode-$PRESET/opencode"
-        mkdir -p "$TARGET_DIR"
         
         if [ -f "$SOURCE_AUTH" ]; then
             cp "$SOURCE_AUTH" "$TARGET_DIR/auth.json"
+            chmod 600 "$TARGET_DIR/auth.json"
+            # Ensure the user retains ownership of the copied file
+            chown "$REAL_USER:$REAL_GROUP" "$TARGET_DIR/auth.json"
             echo "✔ Copied auth.json to $PRESET profile."
         else
             echo "⚠ WARNING: $SOURCE_AUTH not found!"
             echo "  Please run 'opencode auth login' manually later, and copy auth.json to:"
             echo "  $TARGET_DIR/auth.json"
         fi
-        
-        # Prevent EACCES database crashes by restoring ownership
-        chown -R "$REAL_USER:$REAL_GROUP" "$REAL_HOME/.local/share/opencode-$PRESET"
-        if [ -f "$TARGET_DIR/auth.json" ]; then
-            chmod 600 "$TARGET_DIR/auth.json"
-        fi
     done
 fi
 
 echo -e "\n🚀 Deploying Systemd Template..."
-# Substitute User dynamically based on REAL_USER
-sed "s/User=fine/User=$REAL_USER/g" templates/opencode@.service > /tmp/opencode@.service
-sed -i "s/Group=fine/Group=$REAL_GROUP/g" /tmp/opencode@.service
-sed -i "s|WorkingDirectory=/home/fine|WorkingDirectory=$REAL_HOME|g" /tmp/opencode@.service
-sed -i "s|ExecStart=/home/fine|ExecStart=$REAL_HOME|g" /tmp/opencode@.service
+mkdir -p /etc/systemd/system
+
+# Substitute User dynamically based on REAL_USER using | as delimiter
+sed "s|User=fine|User=$REAL_USER|g" templates/opencode@.service > /tmp/opencode@.service
+sed -i "s|Group=fine|Group=$REAL_GROUP|g" /tmp/opencode@.service
+sed -i "s|WorkingDirectory=\"/home/fine\"|WorkingDirectory=\"$REAL_HOME\"|g" /tmp/opencode@.service
+sed -i "s|ExecStart=\"/home/fine|ExecStart=\"$REAL_HOME|g" /tmp/opencode@.service
 
 cp /tmp/opencode@.service /etc/systemd/system/opencode@.service
 rm /tmp/opencode@.service

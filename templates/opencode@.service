@@ -2,22 +2,22 @@
 Description=OpenCode Server - Preset %i
 After=network-online.target
 Wants=network-online.target
+StartLimitIntervalSec=60s
+StartLimitBurst=5
 
 [Service]
 Type=simple
 User=fine
 Group=fine
-WorkingDirectory=/home/fine
+WorkingDirectory="/home/fine"
 
 EnvironmentFile=/etc/opencode/opencode-%i.env
 
 # Path dynamically adjusted during installation
-ExecStart=/home/fine/.opencode/bin/opencode serve --port ${PORT} --hostname 127.0.0.1
+ExecStart="/home/fine/.opencode/bin/opencode" serve --port ${PORT} --hostname 127.0.0.1
 
 Restart=on-failure
 RestartSec=5s
-StartLimitIntervalSec=60s
-StartLimitBurst=5
 NoNewPrivileges=true
 PrivateTmp=true
 
