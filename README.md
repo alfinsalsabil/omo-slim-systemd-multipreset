@@ -4,77 +4,74 @@
 ![Platform](https://img.shields.io/badge/platform-linux%20%7C%20systemd-blue)
 ![OpenCode](https://img.shields.io/badge/OpenCode-compatible-success)
 
+Hey there! 👋 I'm just a "vibecoding" enthusiast who loves using OpenCode. I wanted to run multiple `oh-my-opencode-slim` presets (like `low`, `mid`, and `maks`) at the same time on my server, but I kept running into annoying errors.
 
-High Availability architecture for running multiple `oh-my-opencode-slim` presets concurrently on a single server using systemd.
+After a lot of trial, error, and some AI-assisted debugging, I finally found a setup that works perfectly. I'm sharing this repository in hopes that it helps fellow vibecoders out there!
 
-## 🚀 The Problem
-Running multiple OpenCode presets (e.g., `low`, `mid`, `maks`) simultaneously as background services often leads to:
-1. **`Database is locked`**: SQLite crashes because multiple instances write to the same `opencode.db`.
-2. **`ProviderAuthError`**: Tokens are lost because isolation methods often break the auth paths.
-3. **AI Typing Lag (SSE Buffering)**: AI responses appear broken or delayed when routed through Cloudflare Tunnels.
+## 🐛 The Headaches (The Problem)
+If you try running multiple instances in the background, you'll probably hit these roadblocks:
+1. **`Database is locked`**: SQLite panics because 3 presets are fighting over the exact same `opencode.db` file.
+2. **`ProviderAuthError`**: You lose your login sessions because isolating the folders usually breaks the auth tokens.
+3. **AI Typing Lag**: If you use Cloudflare Tunnels, the AI responses sometimes buffer and arrive all at once instead of streaming smoothly like they should.
 
-## 💡 The Solution: Shared Config, Isolated Data
-This architecture uses an elegant hybrid approach:
-* **Isolated Data (`XDG_DATA_HOME`)**: Each preset (`opencode-low`, `opencode-mid`, `opencode-maks`) gets its own isolated directory for chat history and SQLite databases, preventing locks.
-* **Shared Config (`XDG_CONFIG_HOME`)**: Configurations and token pools (`antigravity-accounts.json`) remain in a shared directory, allowing instances to communicate rate-limits to each other without conflict.
+## 💡 The "Aha!" Moment: Shared Config, Isolated Data
+The trick to fixing all of this is a hybrid setup:
+* **Isolated Data (`XDG_DATA_HOME`)**: We give each preset its own folder for chat history and databases. No more locked databases!
+* **Shared Config (`XDG_CONFIG_HOME`)**: We let them share the main config and token pool (`antigravity-accounts.json`). This way, they automatically know about each other's rate-limits.
 
-*(Note: This architecture is fully tested with the `opencode-antigravity-auth` plugin and its fork `opencode-ag-auth`)*.
+*(Note: I tested this heavily with the `opencode-ag-auth` and `opencode-antigravity-auth` plugins).*
 
 ---
 
-## 🛠️ Installation
+## 🛠️ How to Use It
 
-### Method 1: Automated Script (Recommended)
-We provide an interactive script that automatically handles directory isolation, file ownership, and systemd service generation without causing `EACCES` crashes.
+### The Easy Way: Auto Installer
+I put together a bash script that handles the boring stuff (creating directories, fixing permissions, and making systemd files safely).
 
-1. Clone this repository:
+1. Clone this repo:
    ```bash
    git clone https://github.com/alfinsalsabil/omo-slim-systemd-multipreset.git
    cd omo-slim-systemd-multipreset
    ```
-2. Run the installer with `sudo` (It will safely detect your real user directory):
+2. Run the installer (it asks for `sudo` to create the systemd services safely):
    ```bash
    chmod +x install.sh
    sudo ./install.sh
    ```
-3. Follow the on-screen prompts to configure your WebUI password and Authentication method (API Key vs OAuth Plugin).
+3. Just answer the prompts (WebUI password, API key vs OAuth).
 
-### Method 2: Manual Installation
-Refer to the `templates/` folder and manually copy the files into `/etc/systemd/system/` and `/etc/opencode/`.
+### The Manual Way
+If you prefer doing things by hand, check the `templates/` folder and copy the logic into your `/etc/systemd/system/` and `/etc/opencode/`.
 
 ---
 
-## 🌐 Cloudflare Tunnel Fix (Crucial for AI Streaming)
-By default, Cloudflare Tunnels buffer Server-Sent Events (SSE), making the AI appear to type erratically or stall.
-
-You **must** add the following configuration to your `~/.cloudflared/config.yml` under **each** of your OpenCode ingress rules. See `cloudflare/config-snippet.yml` for an example.
+## 🌐 Fixing the Cloudflare Lag (Crucial!)
+If you use Cloudflare Tunnels (`cloudflared`), Server-Sent Events (SSE) get buffered by default.
+You **must** add this to your `~/.cloudflared/config.yml` under **each** OpenCode hostname. (Check `cloudflare/config-snippet.yml` for an example).
 
 ```yaml
     originRequest:
       disableChunkedEncoding: true
       http2Origin: false
 ```
-*Do not put this in the global config block; it must be under the specific `hostname` ingress.*
 
 ---
 
-## 🔧 Maintenance Guide (Cheat Sheet)
+## 🔧 Cheat Sheet for Later
 
-Because of the "Shared Config, Isolated Data" architecture, follow these rules:
+Since we split the config and data, here is how you manage things later on:
 
-1. **Update a Plugin:**
-   * Run `opencode plugin update <name>` normally in your terminal.
-   * Run `sudo systemctl restart "opencode@*"` to load the new code into memory.
-2. **Login to a New Provider (OAuth / Token):**
-   * Run `opencode auth login` normally in your terminal.
-   * Re-run the copy command to sync your session to the background workers:
-     ```bash
-     cp ~/.local/share/opencode/auth.json ~/.local/share/opencode-low/opencode/auth.json
-     cp ~/.local/share/opencode/auth.json ~/.local/share/opencode-mid/opencode/auth.json
-     cp ~/.local/share/opencode/auth.json ~/.local/share/opencode-maks/opencode/auth.json
-     sudo systemctl restart "opencode@*"
-     ```
-   *(Why not symlink? Because `opencode` uses atomic rename (`fs.rename`) during token refreshes, which silently destroys symlinks and breaks your system!)*.
+1. **Updating Plugins:**
+   Just run `opencode plugin update <name>` normally, then restart the services: `sudo systemctl restart "opencode@*"`.
+2. **Logging into a New Provider (OAuth/Token):**
+   Run `opencode auth login` normally in your terminal. Then, copy the new session file to your background workers:
+   ```bash
+   cp ~/.local/share/opencode/auth.json ~/.local/share/opencode-low/opencode/auth.json
+   cp ~/.local/share/opencode/auth.json ~/.local/share/opencode-mid/opencode/auth.json
+   cp ~/.local/share/opencode/auth.json ~/.local/share/opencode-maks/opencode/auth.json
+   sudo systemctl restart "opencode@*"
+   ```
+   *(Wondering why we copy instead of just using symlinks? It turns out OpenCode uses atomic renaming when refreshing tokens, which silently deletes symlinks! Learned that the hard way).*
 
-## 🤝 Contributing
-Issues and Pull Requests are welcome. This architecture aims to provide the most bulletproof foundation for running OpenCode in production.
+## 🤝 Let's Make It Better
+I'm not a DevOps guru, just enjoying the vibecoding life. If you see something that can be improved, feel free to open an Issue or a Pull Request. Let's build a cool setup together!
