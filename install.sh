@@ -1,6 +1,13 @@
 #!/bin/bash
 set -e
 
+SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+
+if [ "$EUID" -ne 0 ]; then
+  echo "❌ Please run as root (sudo ./install.sh)"
+  exit 1
+fi
+
 if [ "$EUID" -ne 0 ]; then
   echo "❌ Please run as root (sudo ./install.sh)"
   exit 1
@@ -94,7 +101,7 @@ echo -e "\n🚀 Deploying Systemd Template..."
 mkdir -p /etc/systemd/system
 
 # Substitute User dynamically based on REAL_USER using | as delimiter
-sed "s|User=fine|User=$REAL_USER|g" templates/opencode@.service > /tmp/opencode@.service
+sed "s|User=fine|User=$REAL_USER|g" "$SCRIPT_DIR/templates/opencode@.service" > /tmp/opencode@.service
 sed -i "s|Group=fine|Group=$REAL_GROUP|g" /tmp/opencode@.service
 sed -i "s|WorkingDirectory=\"/home/fine\"|WorkingDirectory=\"$REAL_HOME\"|g" /tmp/opencode@.service
 sed -i "s|OPENCODE_BIN_PATH|$OPENCODE_BIN|g" /tmp/opencode@.service
