@@ -1,0 +1,13 @@
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Environment files (in case users test locally)
+*.env
+
+# OS metadata
+.DS_Store
+Thumbs.db

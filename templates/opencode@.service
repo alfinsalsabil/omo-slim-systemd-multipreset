@@ -13,8 +13,8 @@ WorkingDirectory="/home/fine"
 
 EnvironmentFile=/etc/opencode/opencode-%i.env
 
-# Path dynamically adjusted during installation
-ExecStart="/home/fine/.opencode/bin/opencode" serve --port ${PORT} --hostname 127.0.0.1
+# OPENCODE_BIN_PATH is dynamically injected by install.sh
+ExecStart="OPENCODE_BIN_PATH" serve --port ${PORT} --hostname 127.0.0.1
 
 Restart=on-failure
 RestartSec=5s

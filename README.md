@@ -1,5 +1,10 @@
 # omo-slim-systemd-multipreset
 
+![License](https://img.shields.io/github/license/alfinsalsabil/omo-slim-systemd-multipreset)
+![Platform](https://img.shields.io/badge/platform-linux%20%7C%20systemd-blue)
+![OpenCode](https://img.shields.io/badge/OpenCode-compatible-success)
+
+
 High Availability architecture for running multiple `oh-my-opencode-slim` presets concurrently on a single server using systemd.
 
 ## 🚀 The Problem

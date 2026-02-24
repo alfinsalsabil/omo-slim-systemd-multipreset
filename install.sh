@@ -11,10 +11,18 @@ REAL_USER="${SUDO_USER:-$USER}"
 REAL_HOME=$(getent passwd "$REAL_USER" | cut -d: -f6)
 REAL_GROUP=$(id -gn "$REAL_USER")
 
+# Dynamically find the opencode binary (handles both curl and npm global installs)
+OPENCODE_BIN=$(command -v opencode || echo "$REAL_HOME/.opencode/bin/opencode")
+if [ ! -f "$OPENCODE_BIN" ]; then
+    echo "❌ Error: opencode binary not found! Please install it first."
+    exit 1
+fi
+
 echo "==============================================="
 echo "  omo-slim Multipreset Systemd Installer"
 echo "==============================================="
 echo "Target User: $REAL_USER ($REAL_HOME)"
+echo "OpenCode Binary: $OPENCODE_BIN"
 echo ""
 
 read -p "Enter OpenCode WebUI Username: " OC_USER
@@ -29,7 +37,7 @@ read -p "Select [1/2]: " AUTH_METHOD
 API_KEY_ENV=""
 if [ "$AUTH_METHOD" == "1" ]; then
     read -p "Enter your API Key: " API_KEY
-    API_KEY_ENV="GOOGLE_GENERATIVE_AI_API_KEY=$API_KEY"
+    API_KEY_ENV="GOOGLE_GENERATIVE_AI_API_KEY=\"$API_KEY\""
 fi
 
 echo -e "\n⚙️ Generating Environment files..."
@@ -40,8 +48,8 @@ declare -A PORTS=( ["maks"]="4001" ["mid"]="4002" ["low"]="4003" )
 
 for PRESET in maks mid low; do
     ENV_FILE="/etc/opencode/opencode-$PRESET.env"
-    echo "OPENCODE_SERVER_PASSWORD=$OC_PASS" > "$ENV_FILE"
-    echo "OPENCODE_SERVER_USERNAME=$OC_USER" >> "$ENV_FILE"
+    echo "OPENCODE_SERVER_PASSWORD=\"$OC_PASS\"" > "$ENV_FILE"
+    echo "OPENCODE_SERVER_USERNAME=\"$OC_USER\"" >> "$ENV_FILE"
     echo "PORT=${PORTS[$PRESET]}" >> "$ENV_FILE"
     echo "OH_MY_OPENCODE_SLIM_PRESET=$PRESET" >> "$ENV_FILE"
     echo "XDG_DATA_HOME=$REAL_HOME/.local/share/opencode-$PRESET" >> "$ENV_FILE"
@@ -89,7 +97,7 @@ mkdir -p /etc/systemd/system
 sed "s|User=fine|User=$REAL_USER|g" templates/opencode@.service > /tmp/opencode@.service
 sed -i "s|Group=fine|Group=$REAL_GROUP|g" /tmp/opencode@.service
 sed -i "s|WorkingDirectory=\"/home/fine\"|WorkingDirectory=\"$REAL_HOME\"|g" /tmp/opencode@.service
-sed -i "s|ExecStart=\"/home/fine|ExecStart=\"$REAL_HOME|g" /tmp/opencode@.service
+sed -i "s|OPENCODE_BIN_PATH|$OPENCODE_BIN|g" /tmp/opencode@.service
 
 cp /tmp/opencode@.service /etc/systemd/system/opencode@.service
 rm /tmp/opencode@.service
