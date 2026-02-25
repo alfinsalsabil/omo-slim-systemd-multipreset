@@ -1,38 +1,26 @@
 # =========================================================================
 # CLOUDFLARE TUNNEL SSE FIX (config-snippet.yml)
 # =========================================================================
-# If you use Cloudflare Tunnels (cloudflared) to expose OpenCode to the web,
-# the AI responses will buffer and lag ("AI typing stutter") because
-# Cloudflare caches chunked HTTP/2 streams by default.
+# The biggest mistake people make when setting up Cloudflare Tunnels
+# with OpenCode is adding `disableChunkedEncoding: true` or `http2Origin: true`.
+# 
+# OpenCode uses HTTP/1.1 for its internal server. If you force HTTP/2
+# or disable chunked encoding, your AI typing stream will break or 502!
 #
-# DO NOT put these settings in the global `originRequest` block.
-# You must attach them specifically to each OpenCode hostname ingress rule.
+# Your ingress rules should be perfectly clean like this:
 
 ingress:
   # Example for preset Maks (Port 4001)
   - hostname: maks-oc.yourdomain.com
     service: http://127.0.0.1:4001
-    originRequest:
-      # CRITICAL: Must be false to allow SSE streaming without buffering
-      disableChunkedEncoding: false
-      # CRITICAL: Prevent local HTTP/2 framing issues with SSE
-      http2Origin: true
 
   # Example for preset Mid (Port 4002)
   - hostname: mid-oc.yourdomain.com
     service: http://127.0.0.1:4002
-    originRequest:
-      # CRITICAL: Must be false to allow SSE streaming without buffering
-      disableChunkedEncoding: false
-      http2Origin: true
 
   # Example for preset Low (Port 4003)
   - hostname: low-oc.yourdomain.com
     service: http://127.0.0.1:4003
-    originRequest:
-      # CRITICAL: Must be false to allow SSE streaming without buffering
-      disableChunkedEncoding: false
-      http2Origin: true
 
   # Mandatory catch-all
   - service: http_status:404

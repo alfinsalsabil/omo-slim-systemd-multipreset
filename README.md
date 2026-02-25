@@ -47,12 +47,9 @@ If you prefer doing things by hand, check the `templates/` folder and copy the l
 
 ## 🌐 Fixing the Cloudflare Lag (Crucial!)
 If you use Cloudflare Tunnels (`cloudflared`), Server-Sent Events (SSE) get buffered by default.
-You **must** add this to your `~/.cloudflared/config.yml` under **each** OpenCode hostname. (Check `cloudflare/config-snippet.yml` for an example).
+Make sure your ingress rules are clean (do not add disableChunkedEncoding or http2Origin). `~/.cloudflared/config.yml` under **each** OpenCode hostname. (Check `cloudflare/config-snippet.yml` for an example).
 
 ```yaml
-    originRequest:
-      disableChunkedEncoding: false
-      http2Origin: true
 ```
 
 ---
