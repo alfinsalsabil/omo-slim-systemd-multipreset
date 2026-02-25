@@ -51,8 +51,8 @@ You **must** add this to your `~/.cloudflared/config.yml` under **each** OpenCod
 
 ```yaml
     originRequest:
-      disableChunkedEncoding: true
-      http2Origin: false
+      disableChunkedEncoding: false
+      http2Origin: true
 ```
 
 ---

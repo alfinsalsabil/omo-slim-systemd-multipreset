@@ -13,24 +13,26 @@ ingress:
   - hostname: maks-oc.yourdomain.com
     service: http://127.0.0.1:4001
     originRequest:
-      # CRITICAL: Prevent Cloudflare edge from buffering the stream
-      disableChunkedEncoding: true
+      # CRITICAL: Must be false to allow SSE streaming without buffering
+      disableChunkedEncoding: false
       # CRITICAL: Prevent local HTTP/2 framing issues with SSE
-      http2Origin: false
+      http2Origin: true
 
   # Example for preset Mid (Port 4002)
   - hostname: mid-oc.yourdomain.com
     service: http://127.0.0.1:4002
     originRequest:
-      disableChunkedEncoding: true
-      http2Origin: false
+      # CRITICAL: Must be false to allow SSE streaming without buffering
+      disableChunkedEncoding: false
+      http2Origin: true
 
   # Example for preset Low (Port 4003)
   - hostname: low-oc.yourdomain.com
     service: http://127.0.0.1:4003
     originRequest:
-      disableChunkedEncoding: true
-      http2Origin: false
+      # CRITICAL: Must be false to allow SSE streaming without buffering
+      disableChunkedEncoding: false
+      http2Origin: true
 
   # Mandatory catch-all
   - service: http_status:404
